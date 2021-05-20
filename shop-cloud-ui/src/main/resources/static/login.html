@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>login</title>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
+    <script src="/js/jquery.min.js" type="text/javascript"></script>
+    <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css"/><!-- bootstrap -->
+    <script src="/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="/jquery-validation/jquery.validate.min.js" type="text/javascript"></script> <!-- jquery-validator -->
+    <script src="/jquery-validation/localization/messages_zh.min.js" type="text/javascript"></script>
+    <script src="/layer/layer.js" type="text/javascript"></script><!-- layer -->
+    <script src="/js/md5.min.js" type="text/javascript"></script><!-- md5.js -->
+    <script src="/js/common.js" type="text/javascript"></script><!-- common.js -->
+</head>
+<body>
+<form id="loginForm" method="post" name="loginForm" style="width:50%; margin:0 auto">
+    <h2 style="text-align:center; margin-bottom: 20px">login</h2>
+    <div class="form-group">
+        <div class="row">
+            <label class="form-label col-md-4">enter phone number</label>
+            <div class="col-md-5">
+                <input class="form-control" id="mobile" maxlength="11" minlength="11" name="mobile"
+                       placeholder="phone number" required="true" type="text"/>
+            </div>
+            <div class="col-md-1">
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="row">
+            <label class="form-label col-md-4">enter password</label>
+            <div class="col-md-5">
+                <input class="form-control" id="password" maxlength="16" minlength="6" name="password"
+                       placeholder="password" required="true" type="password"/>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-5">
+            <button class="btn btn-primary btn-block" onclick="reset()" type="reset">reset</button>
+        </div>
+        <div class="col-md-5">
+            <button class="btn btn-primary btn-block" onclick="doLogin()" type="button">login</button>
+        </div>
+    </div>
+</form>
+<script>
+    function doLogin() {
+        var username = $("#mobile").val();
+        var password = $("#password").val();
+
+        // 111111
+        password = "" + passsword_salt.charAt(0) + passsword_salt.charAt(2) + password + passsword_salt.charAt(4) + passsword_salt.charAt(6);
+        // 1211111134
+        password = md5(password);
+
+        $.ajax({
+            url: "http://localhost:9000/member/api/tokens/login",
+            type: "POST",
+            data: {username: username, password: password},
+            xhrFields: {withCredentials: true},
+            success: function (res) {
+                if (res.code === "00000") {
+                    location.href = "/goods.html";
+                } else {
+                    layer.msg(res.msg);
+                }
+            }
+        });
+
+    }
+</script>
+</body>
+</html>

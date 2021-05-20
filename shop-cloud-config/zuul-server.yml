@@ -1,0 +1,40 @@
+server:
+  port: 9000
+ribbon:
+  ReadTimeout: 10000
+  SocketTimeout: 10000
+zuul:
+  SendErrorFilter:
+    error:
+      disable: true
+  ratelimit:
+    key-prefix: ratelimit
+    enabled: true
+    repository: REDIS
+    behind-proxy: true
+    add-response-headers: true
+    default-policy-list: #optional - will apply unless specific policy exists
+      - limit: 10 #optional - request number limit per refresh interval window
+        quota: 1000 #optional - request time limit per refresh interval window (in seconds)
+        refresh-interval: 60 #default value (in seconds)
+        type: #optional
+          - origin
+  host:
+    socket-timeout-millis: 60000
+    connect-timeout-millis: 60000
+  forceOriginalQueryStringEncoding: true
+  ignored-patterns: /*-server/**
+  sensitiveHeaders:
+  routes:
+    member-server-route:
+      path: /member/**
+      service-id: member-server
+      custom-sensitive-headers: true
+    goods-server-route:
+      path: /goods/**
+      service-id: goods-server
+      custom-sensitive-headers: true
+    seckill-server-route:
+      path: /seckill/**
+      service-id: seckill-server
+      custom-sensitive-headers: true

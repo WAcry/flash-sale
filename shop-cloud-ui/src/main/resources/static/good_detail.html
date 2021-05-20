@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<head>
+    <title>item info</title>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
+    <script src="/js/jquery.min.js" type="text/javascript"></script>
+    <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css"/><!-- bootstrap -->
+    <script src="/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="/jquery-validation/jquery.validate.min.js" type="text/javascript"></script> <!-- jquery-validator -->
+    <script src="/jquery-validation/localization/messages_zh.min.js" type="text/javascript"></script>
+    <script src="/layer/layer.js" type="text/javascript"></script><!-- layer -->
+    <script src="/js/md5.min.js" type="text/javascript"></script><!-- md5.js -->
+    <script src="/js/common.js" type="text/javascript"></script><!-- common.js -->
+    <script src="/js/socket.js" type="text/javascript"></script><!-- common.js -->
+</head>
+<body>
+<div class="panel panel-default">
+    <div class="panel-heading">item info</div>
+    <div class="panel-body">
+        <div id="userTip" style="display: none">
+            <span> not login yet, <a href="/login.html">login</a>first<br/></span>
+        </div>
+        <span>no address。。。</span>
+    </div>
+    <table class="table">
+        <tr>
+            <td>item</td>
+            <td colspan="3" id="goodName"></td>
+        </tr>
+        <tr>
+            <td>item img</td>
+            <td colspan="3"><img height="200" id="goodImg" width="200"/></td>
+        </tr>
+        <tr>
+            <td>deal start at</td>
+            <td id="startDate"></td>
+            <td id="seckillTip">
+            </td>
+            <td>
+                <img height="32" id="verifyCodeImg" onclick="initVerifyCodeImg()" width="80">
+                <input id="verifyCode">
+                <button class="btn btn-primary btn-block" disabled id="buyButton" onclick="getPath()" type="button">buy
+                    now
+                </button>
+            </td>
+        </tr>
+        <tr>
+            <td>original price</td>
+            <td colspan="3" id="goodPrice"></td>
+        </tr>
+        <tr>
+            <td>deal price</td>
+            <td colspan="3" id="seckillPrice"></td>
+        </tr>
+        <tr>
+            <td>item amount</td>
+            <td colspan="3" id="stockCount"></td>
+        </tr>
+    </table>
+</div>
+<script>
+    var seckillId, user;
+
+    $(function () {
+        seckillId = getQueryString("seckillId");
+
+        initGood();
+
+        initUser();
+
+
+        initVerifyCodeImg();
+    });
+
+    function initVerifyCodeImg() {
+        $("#verifyCodeImg").prop("src", "http://localhost:9000/seckill/api/verify/code?seckillId=" + seckillId + "&t=" + new Date().getTime());
+    }
+
+    /**
+     */
+    function getPath() {
+        if (!user) {
+            layer.msg("login in first！");
+            return;
+        }
+
+        var verifyCode = $("#verifyCode").val();
+        if (!verifyCode) {
+            layer.msg("enter the captcha！");
+            return;
+        }
+        $.ajax({
+            url: 'http://localhost:9000/seckill/api/path',
+            type: "GET",
+            xhrFields: {withCredentials: true},
+            data: {seckillId: seckillId, verifyCode: verifyCode},
+            success: function (res) {
+                if (res.code === "00000") {
+                    // res.data == random
+                    doSeckill(res.data);
+                } else {
+                    layer.msg(res.msg);
+                }
+            }
+        });
+    }
+
+    /**
+     */
+    function doSeckill(random) {
+        if (!user) {
+            layer.msg("login in first！");
+            return;
+        }
+
+        var uuid = getUuid(user.id);
+
+
+        $.ajax({
+            url: 'http://localhost:9000/seckill/api/orders/' + random,
+            type: "POST",
+            xhrFields: {withCredentials: true},
+            data: {seckillId: seckillId, uuid: uuid},
+            success: function (res) {
+
+                if (res.code === "00000") {
+                    //location.href = "/order_detail.html?orderNo=" + res.data;
+                    layer.msg(res.msg);
+                    createScoket(uuid);
+                } else {
+                    layer.msg(res.msg);
+                }
+            }
+        });
+    }
+
+    function initUser() {
+        $.ajax({
+            url: 'http://localhost:9000/member/api/tokens/session',
+            type: "GET",
+            xhrFields: {withCredentials: true},
+            success: function (res) {
+                renderUser(res.data);
+            }
+        });
+    }
+
+    function renderUser(data) {
+        if (data) {
+
+            user = data;
+        } else {
+
+            $("#userTip").show();
+        }
+    }
+
+
+    function initGood() {
+        $.ajax({
+            url: 'http://localhost:9000/seckill/api/seckill/goods/' + seckillId,
+            type: "GET",
+            xhrFields: {withCredentials: true},
+            success: function (res) {
+                render(res.data);
+            }
+        });
+    }
+
+    function render(good) {
+        $("#goodName").html(good.goodName);
+        $("#goodImg").prop("src", good.goodImg);
+        $("#goodPrice").html(good.goodPrice);
+        $("#startDate").html(good.startDate);
+        $("#seckillPrice").html(good.seckillPrice);
+        $("#stockCount").html(good.stockCount);
+        renderTime(good.startDate, good.endDate);
+    }
+
+    var remainStartSeconds,
+        remainEndSeconds,
+        timer;
+
+    function renderTime(sDate, eDate) {
+        var startTime = new Date(sDate);
+        var endTime = new Date(eDate);
+        var now = new Date();
+
+        // startTime: 2020-04-12 12:00:00 - nowTime: 2020-04-12 00:45:00   >   0
+        // startTime: 2020-04-12 12:00:00 - nowTime: 2020-04-12 12:45:00   <   0
+        remainStartSeconds = parseInt((startTime.getTime() - now.getTime()) / 1000);
+        // endTime: 2020-04-12 12:30:00 - nowTime: 2020-04-12 00:45:00   >   0
+        // endTime: 2020-04-12 12:30:00 - nowTime: 2020-04-12 12:45:00   <   0
+        remainEndSeconds = parseInt((endTime.getTime() - now.getTime()) / 1000);
+
+
+        timer = setInterval(showTip, 1000);
+    }
+
+    var seckillTip = $("#seckillTip"),
+        buyButton = $("#buyButton");
+
+    function showTip() {
+
+        remainStartSeconds--;
+        remainEndSeconds--;
+
+        if (remainStartSeconds > 0) {
+
+            seckillTip.html("start after：" + remainStartSeconds + "seconds");
+        } else {
+            if (remainEndSeconds < 0) {
+
+                seckillTip.html("flash sale is ended");
+                buyButton.prop("disabled", true);
+                return;
+            }
+
+
+            seckillTip.html("flash sale begins");
+            buyButton.prop("disabled", false);
+        }
+    }
+</script>
+</body>
+</html>
