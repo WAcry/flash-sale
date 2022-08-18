@@ -1,4 +1,4 @@
-# flash-sale
+# flash-sale-cloud
 
 Spring Cloud MicroService practice dealing with high concurrency situations
 
